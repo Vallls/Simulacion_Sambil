@@ -12,14 +12,14 @@ conn = psycopg2.connect(host = 'localhost', user= 'postgres', password ='2745091
 
 def compra(a):
     cur = conn.cursor()
-    sql = '''INSERT INTO compra (factura,idtienda,monto) VALUES ( %s, %s, %s);'''
-    cur.execute(sql, (a["factura"],a["idtienda"],a["monto"]))
+    sql = '''INSERT INTO compra (factura,idtienda,monto,cedula,mcadress) VALUES ( %s, %s, %s, %s, %s);'''
+    cur.execute(sql, (a["factura"],a["idtienda"],a["monto"], a["cedula"], a["mcadress"]))
     conn.commit()
 
-def mcadress_compra(a):
+def compra2(a):
     cur = conn.cursor()
-    sql = '''INSERT INTO mcadress_compra (factura,mcadress) VALUES ( %s, %s, %s);'''
-    cur.execute(sql, (a["factura"],a["mcadress"], a["cedula"]))
+    sql = '''INSERT INTO compra (factura,idtienda,monto,cedula) VALUES ( %s, %s, %s, %s);'''
+    cur.execute(sql, (a["factura"],a["idtienda"],a["monto"], a["cedula"]))
     conn.commit()
 
 def on_connect(client, userdata, flags, rc):    
@@ -30,10 +30,10 @@ def on_message(client, userdata, message):
     a = json.loads(message.payload)
     print(a)
     print('------------------------------')
-    compra(a)
-    if a["mcadress"] != '':
-        mcadress_compra(a)
-    
+    if a['mcadress'] == '':
+        compra2(a)
+    else:
+        compra(a)
 
 def main():	
 	client = paho.mqtt.client.Client()

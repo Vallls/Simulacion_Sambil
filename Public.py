@@ -139,6 +139,7 @@ def personasCMA(mcAdress,sexo,sensor,hora,mc,cedula):
 def compraComida(comidaC,mcAdress,hora,sexo,edad,cedula):
     factura = np.random.randint(1111111,9999999)
     monto = np.random.uniform(10,300)
+    monto = round(monto,2)
     mesa = np.random.randint(1,3)
     print('mesa:', mesa)
     if mcAdress != '':
@@ -228,6 +229,7 @@ def salirTiendasComidaNMC(comidaC,hora,sexo,edad):
 def comprarTienda(normal,mcAdress,cedula):
     factura = np.random.randint(1111111,9999999)
     monto = np.random.uniform(50,1000)
+    monto = round(monto,2)
     if mcAdress != '':
         if np.random.randint(1,3) == 2:
             cedula = np.random.uniform(1000000,15000000)
@@ -337,6 +339,10 @@ def recorrido(hora,mcadress,cedula):
 
 def recorridoNMC(hora,sexo,edad):
     visitas =  cantTiendas(hora)
+    cedula = np.random.uniform(1000000,15000000)
+    while(cedula<0):
+        cedula = np.random.uniform(1000000,15000000)
+    cedula = round(cedula) 
     print(visitas)
     cond = (visitas[0] + visitas[1] + visitas[2])
     while(cond != 0):
@@ -362,7 +368,7 @@ def recorridoNMC(hora,sexo,edad):
             comprar = np.random.randint(1,3)
             print('comprar:',comprar)
             if comprar == 1:
-                comprarTienda(normal,'','')
+                comprarTienda(normal,'',cedula)
             sensorN = np.random.randint(datosNormal[0],datosNormal[1]+1)
             salida = np.random.randint(10,31)
             hora = hora + datetime.timedelta(minutes=salida)
@@ -398,7 +404,7 @@ def recorridoNMC(hora,sexo,edad):
             }
             client.publish('sambil/sensores/tiendas-mesas',json.dumps(payload),qos=0)
             print(payload)
-            compraComida(comidaC,'',hora,sexo,edad,'')
+            compraComida(comidaC,'',hora,sexo,edad,cedula)
             visitas[1] = visitas[1] - 1
         elif visitas[0] == 0 and visitas[2] != 0 or visitas[1] == 0 and visitas[2] != 0: #Tiendas de comida donde NO compra
             datosTNC = tiendasComida()
@@ -486,7 +492,12 @@ def escoger_ma(ma):
 def ultimoAcceso(mcadress):
     ultimoAcceso = pandas.read_sql_query("select fecha_hora from sensor_mcadress where mcadress = '%s' order by fecha_hora desc limit 1"%mcadress,con)
     fecha = str(pandas.unique(ultimoAcceso['fecha_hora']))
-    return fecha 
+    return fecha
+
+def CedulaMA(mcadress):
+    cedulaMA = pandas.read_sql_query("SELECT cedula from mcadress where mcadress =  '%s'"%mcadress,con)
+    cedula = int(pandas.unique(cedulaMA['cedula']))
+    return cedula 
     
 
 def main():
@@ -570,6 +581,8 @@ def main():
                         client.publish('sambil/sensores/entrada',json.dumps(payload),qos=0)
                         print(payload)
                         time.sleep(0.5)
+                        cedula = int(CedulaMA(ma_escogido))
+                        print('la cedula es: ',cedula)
                         recorrido(hora,ma_escogido,cedula)  
             personasPorDia-=1
         day = day +1
