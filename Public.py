@@ -114,7 +114,7 @@ def cantTiendas(hora):
        comidaNC = 0
     return [normales,comidaC,comidaNC]
 
-def personasCMA(mcAdress,sexo,sensor,hora,mc):
+def personasCMA(mcAdress,sexo,sensor,hora,mc,cedula):
     mcadress = mcAdress
     lastname = readJson('apellidos.json',"last_name",'last_name')
     telefono = np.random.randint(1111111,9999999)
@@ -130,21 +130,29 @@ def personasCMA(mcAdress,sexo,sensor,hora,mc):
         "apellido": str(lastname),
         "telefono": str(telefono),
         "sexo": str(sexo),
-        "edad": int(mc[1])
+        "edad": int(mc[1]),
+        "cedula": int(cedula)
     }
     client.publish('sambil/sensores/entrada',json.dumps(payload),qos=0)
     print(payload)
 
-def compraComida(comidaC,mcAdress,hora,sexo,edad):
+def compraComida(comidaC,mcAdress,hora,sexo,edad,cedula):
     factura = np.random.randint(1111111,9999999)
     monto = np.random.uniform(10,300)
     mesa = np.random.randint(1,3)
     print('mesa:', mesa)
+    if mcAdress != '':
+        if np.random.randint(1,3) == 2:
+            cedula = np.random.uniform(1000000,15000000)
+            while(cedula<0):
+                cedula = np.random.uniform(1000000,15000000)
+            cedula = round(cedula)
     payload = {
         "factura": int(factura),
         "idtienda": int(comidaC),
         "monto": float(monto),
-        "mcadress": str(mcAdress)
+        "mcadress": str(mcAdress),
+        "cedula": int(cedula)
     }
     client.publish('sambil/compra/mcadress',json.dumps(payload),qos=0)
     print(payload)
@@ -217,19 +225,26 @@ def salirTiendasComidaNMC(comidaC,hora,sexo,edad):
     print(payload)
     time.sleep(0.5)
 
-def comprarTienda(normal,mcAdress):
+def comprarTienda(normal,mcAdress,cedula):
     factura = np.random.randint(1111111,9999999)
     monto = np.random.uniform(50,1000)
+    if mcAdress != '':
+        if np.random.randint(1,3) == 2:
+            cedula = np.random.uniform(1000000,15000000)
+            while(cedula<0):
+                cedula = np.random.uniform(1000000,15000000)
+            cedula = round(cedula)
     payload = {
         "factura": int(factura),
         "idtienda": int(normal),
         "monto": float(monto),
-        "mcadress": str(mcAdress)
+        "mcadress": str(mcAdress),
+        "cedula": int(cedula)
     }
     client.publish('sambil/compra/mcadress',json.dumps(payload),qos=0)
     print(payload)
 
-def recorrido(hora,mcadress):
+def recorrido(hora,mcadress,cedula):
     visitas =  cantTiendas(hora)
     print(visitas)
     mcAdress = mcadress
@@ -252,7 +267,7 @@ def recorrido(hora,mcadress):
             comprar = np.random.randint(1,3)
             print('comprar:',comprar)
             if comprar == 1:
-                comprarTienda(normal,mcAdress)
+                comprarTienda(normal,mcAdress,cedula)
             sensorN = np.random.randint(datosNormal[0],datosNormal[1]+1)
             salida = np.random.randint(10,31)
             hora = hora + datetime.timedelta(minutes=salida)
@@ -278,7 +293,7 @@ def recorrido(hora,mcadress):
             }
             client.publish('sambil/sensores/tiendas-mesas',json.dumps(payload),qos=0)
             print(payload)
-            compraComida(comidaC,mcAdress,hora,'','')
+            compraComida(comidaC,mcAdress,hora,'','',cedula)
             visitas[1] = visitas[1] - 1
         elif visitas[0] == 0 and visitas[2] != 0 or visitas[1] == 0 and visitas[2] != 0: #Tiendas de comida donde NO compra
             datosTNC = tiendasComida()
@@ -347,7 +362,7 @@ def recorridoNMC(hora,sexo,edad):
             comprar = np.random.randint(1,3)
             print('comprar:',comprar)
             if comprar == 1:
-                comprarTienda(normal,'')
+                comprarTienda(normal,'','')
             sensorN = np.random.randint(datosNormal[0],datosNormal[1]+1)
             salida = np.random.randint(10,31)
             hora = hora + datetime.timedelta(minutes=salida)
@@ -383,7 +398,7 @@ def recorridoNMC(hora,sexo,edad):
             }
             client.publish('sambil/sensores/tiendas-mesas',json.dumps(payload),qos=0)
             print(payload)
-            compraComida(comidaC,'',hora,sexo,edad)
+            compraComida(comidaC,'',hora,sexo,edad,'')
             visitas[1] = visitas[1] - 1
         elif visitas[0] == 0 and visitas[2] != 0 or visitas[1] == 0 and visitas[2] != 0: #Tiendas de comida donde NO compra
             datosTNC = tiendasComida()
@@ -471,7 +486,7 @@ def escoger_ma(ma):
 def ultimoAcceso(mcadress):
     ultimoAcceso = pandas.read_sql_query("select fecha_hora from sensor_mcadress where mcadress = '%s' order by fecha_hora desc limit 1"%mcadress,con)
     fecha = str(pandas.unique(ultimoAcceso['fecha_hora']))
-    return fecha
+    return fecha 
     
 
 def main():
@@ -494,9 +509,13 @@ def main():
                 mc = personasMA()
                 if  mc[0] == True:
                     mcAdress =  generateMC()
-                    personasCMA(mcAdress,sexo,sensor,hora,mc)
+                    cedula = np.random.uniform(1000000,15000000)
+                    while(cedula<0):
+                       cedula = np.random.uniform(1000000,15000000)
+                    cedula = round(cedula) 
+                    personasCMA(mcAdress,sexo,sensor,hora,mc,cedula)
                     time.sleep(0.5)
-                    recorrido(hora,mcAdress)
+                    recorrido(hora,mcAdress,cedula)
 
                 else:
                     duracionNMC(sensor,hora,sexo,mc[1])
@@ -510,9 +529,13 @@ def main():
                     mc = personasMA()
                     if  mc[0] == True:
                         mcAdress =  generateMC()
-                        personasCMA(mcAdress,sexo,sensor,hora,mc)
+                        cedula = np.random.uniform(1000000,15000000)
+                        while(cedula<0):
+                            cedula = np.random.uniform(1000000,15000000)
+                        cedula = round(cedula)
+                        personasCMA(mcAdress,sexo,sensor,hora,mc,cedula)
                         time.sleep(0.5)
-                        recorrido(hora,mcAdress)
+                        recorrido(hora,mcAdress,cedula)
                     else:
                         duracionNMC(sensor,hora,sexo,mc[1])
                 else:    
@@ -527,9 +550,13 @@ def main():
                         mc = personasMA()
                         if  mc[0] == True:
                             mcAdress =  generateMC()
-                            personasCMA(mcAdress,sexo,sensor,hora,mc)
+                            cedula = np.random.uniform(1000000,15000000)
+                            while(cedula<0):
+                                cedula = np.random.uniform(1000000,15000000)
+                            cedula = round(cedula)
+                            personasCMA(mcAdress,sexo,sensor,hora,mc,cedula)
                             time.sleep(0.5)
-                            recorrido(hora,mcAdress)
+                            recorrido(hora,mcAdress,cedula)
                         else:
                             duracionNMC(sensor,hora,sexo,mc[1])
                     else:     
@@ -543,7 +570,7 @@ def main():
                         client.publish('sambil/sensores/entrada',json.dumps(payload),qos=0)
                         print(payload)
                         time.sleep(0.5)
-                        recorrido(hora,ma_escogido)  
+                        recorrido(hora,ma_escogido,cedula)  
             personasPorDia-=1
         day = day +1
 

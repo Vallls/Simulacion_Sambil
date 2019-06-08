@@ -12,8 +12,8 @@ conn = psycopg2.connect(host = 'localhost', user= 'postgres', password ='2745091
 
 def mcAdress(a):
     cur = conn.cursor()
-    sql = '''INSERT INTO mcadress (mcadress,nombre,apellido,telefono,sexo,edad) VALUES ( %s, %s, %s, %s, %s, %s);'''
-    cur.execute(sql, (a["mcadress"],a["nombre"],a["apellido"],a["telefono"],a["sexo"],a["edad"]))
+    sql = '''INSERT INTO mcadress (mcadress,nombre,apellido,telefono,sexo,edad,cedula) VALUES ( %s, %s, %s, %s, %s, %s, %s);'''
+    cur.execute(sql, (a["mcadress"],a["nombre"],a["apellido"],a["telefono"],a["sexo"],a["edad"],a["cedula"]))
     conn.commit()
 
 def sensor_mcadress(a):

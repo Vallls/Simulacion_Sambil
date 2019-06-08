@@ -18,8 +18,8 @@ def compra(a):
 
 def mcadress_compra(a):
     cur = conn.cursor()
-    sql = '''INSERT INTO mcadress_compra (factura,mcadress) VALUES ( %s, %s);'''
-    cur.execute(sql, (a["factura"],a["mcadress"]))
+    sql = '''INSERT INTO mcadress_compra (factura,mcadress) VALUES ( %s, %s, %s);'''
+    cur.execute(sql, (a["factura"],a["mcadress"], a["cedula"]))
     conn.commit()
 
 def on_connect(client, userdata, flags, rc):    
