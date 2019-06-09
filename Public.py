@@ -11,7 +11,7 @@ import paho.mqtt.publish
 import numpy as np
 import datetime
 
-con = psycopg2.connect(host = 'localhost', user= 'postgres', password ='27450917', dbname= 'proyecto1')
+con = psycopg2.connect(host = 'localhost', user= 'postgres', password ='27450917', dbname= 'ABDP1')
 client = paho.mqtt.client.Client("Vallls", False)
 
 def on_connect(client, userdata, flags, rc):
@@ -20,8 +20,57 @@ def on_connect(client, userdata, flags, rc):
 def Sensor():
     sensor_entrada = pandas.read_sql_query("SELECT  Min(sensor_entrada.idsensor), Max(sensor_entrada.idsensor) From sensor_entrada",con)
     ini= int(pandas.unique(sensor_entrada['min']))
+    fin = int(pandas.unique(sensor_entrada['max']))   
+    return [ini,fin]
+
+def tiendas():
+    tienda = pandas.read_sql_query("Select min(tienda.id), max(tienda.id) from tienda left join mesa on tienda.id = mesa.idtienda where mesa.idtienda is null",con)
+    ini= int(pandas.unique(tienda['min']))
+    fin = int(pandas.unique(tienda['max']))
+    return [ini,fin]
+
+def tiendasComida():
+    comida = pandas.read_sql_query("Select min(mesa.idtienda), max(mesa.idtienda) from mesa",con)
+    ini= int(pandas.unique(comida['min']))
+    fin = int(pandas.unique(comida['max']))
+    return [ini,fin]
+
+def sensor_tiendas(tienda):
+    sensor_entrada = pandas.read_sql_query("SELECT  Min(sensor_tienda.idsensor), Max(sensor_tienda.idsensor) From sensor_tienda where sensor_tienda.idtienda = %s"%tienda,con)
+    ini= int(pandas.unique(sensor_entrada['min']))
     fin = int(pandas.unique(sensor_entrada['max']))
     return [ini,fin]
+
+def sensor_mesa(tienda):
+    sensor_mesa = pandas.read_sql_query("Select min(sensor_mesa.idsensor), max(sensor_mesa.idsensor) From sensor_mesa INNER JOIN mesa on sensor_mesa.idmesa = mesa.id INNER JOIN tienda on mesa.idtienda = tienda.id WHERE tienda.id = %s"%tienda,con)
+    ini= int(pandas.unique(sensor_mesa['min']))
+    fin = int(pandas.unique(sensor_mesa['max']))
+    return [ini,fin]
+
+def ultimoAcceso(mcadress):
+    ultimoAcceso = pandas.read_sql_query("select fecha_hora from sensor_mcadress where mcadress = '%s' order by fecha_hora desc limit 1"%mcadress,con)
+    fecha = str(pandas.unique(ultimoAcceso['fecha_hora']))
+    return fecha
+
+def CedulaMA(mcadress):
+    cedulaMA = pandas.read_sql_query("SELECT cedula from mcadress where mcadress =  '%s'"%mcadress,con)
+    cedula = int(pandas.unique(cedulaMA['cedula']))
+    return cedula
+
+def devolver_ma():
+    cur = con.cursor()
+    cur.execute("SELECT mcadress.mcadress FROM mcadress")
+    rows = cur.fetchall()
+    ma_usuarios = []
+    for row in rows:
+        ma_usuarios.append(row)
+    return ma_usuarios
+
+def escoger_ma(ma):
+    ma_array = ma
+    ma_escogido = np.random.randint(0,len(ma_array))
+    return ma_array[ma_escogido]
+
 
 def readJson(url, data, data2):
     ram = np.random.randint(1,1000)    
@@ -69,31 +118,7 @@ def personasMA():
     if edad >= 12 and edad <= 35 and ma <= 8 or edad >= 36 and edad <= 50 and ma <= 7 or edad >= 51 and edad <= 65 and ma <= 5 or edad >= 66 and edad <= 75 and ma <= 3 or edad >= 76 and ma <= 2:
        return [True,edad]
     elif edad >= 12 and edad <= 35 and ma >= 8 or edad >= 36 and edad <= 50 and ma >= 7 or edad >= 51 and edad <= 65 and ma >= 5 or edad >= 66 and edad <= 75 and ma >= 3 or edad >= 76 and ma >= 2:
-       return [False,edad]   
-
-def tiendas():
-    tienda = pandas.read_sql_query("Select min(tienda.id), max(tienda.id) from tienda left join mesa on tienda.id = mesa.idtienda where mesa.idtienda is null",con)
-    ini= int(pandas.unique(tienda['min']))
-    fin = int(pandas.unique(tienda['max']))
-    return [ini,fin]
-
-def tiendasComida():
-    comida = pandas.read_sql_query("Select min(mesa.idtienda), max(mesa.idtienda) from mesa",con)
-    ini= int(pandas.unique(comida['min']))
-    fin = int(pandas.unique(comida['max']))
-    return [ini,fin]
-
-def sensor_tiendas(tienda):
-    sensor_entrada = pandas.read_sql_query("SELECT  Min(sensor_tienda.idsensor), Max(sensor_tienda.idsensor) From sensor_tienda where sensor_tienda.idtienda = %s"%tienda,con)
-    ini= int(pandas.unique(sensor_entrada['min']))
-    fin = int(pandas.unique(sensor_entrada['max']))
-    return [ini,fin]
-
-def sensor_mesa(tienda):
-    sensor_mesa = pandas.read_sql_query("Select min(sensor_mesa.idsensor), max(sensor_mesa.idsensor) From sensor_mesa INNER JOIN mesa on sensor_mesa.idmesa = mesa.id INNER JOIN tienda on mesa.idtienda = tienda.id WHERE tienda.id = %s"%tienda,con)
-    ini= int(pandas.unique(sensor_mesa['min']))
-    fin = int(pandas.unique(sensor_mesa['max']))
-    return [ini,fin]
+       return [False,edad]
 
 def cantTiendas(hora):
     if hora.hour >= 10 and hora.hour <= 12:
@@ -137,23 +162,25 @@ def personasCMA(mcAdress,sexo,sensor,hora,mc,cedula):
     print(payload)
 
 def compraComida(comidaC,mcAdress,hora,sexo,edad,cedula):
+    print('----------Comprando Comida-----------')
     factura = np.random.randint(1111111,9999999)
     monto = np.random.uniform(10,300)
     monto = round(monto,2)
     mesa = np.random.randint(1,3)
-    print('mesa:', mesa)
     if mcAdress != '':
         if np.random.randint(1,3) == 2:
             cedula = np.random.uniform(1000000,15000000)
             while(cedula<0):
                 cedula = np.random.uniform(1000000,15000000)
             cedula = round(cedula)
+    hora = hora + datetime.timedelta(minutes= np.random.randint(7,10))
     payload = {
         "factura": int(factura),
         "idtienda": int(comidaC),
         "monto": float(monto),
         "mcadress": str(mcAdress),
-        "cedula": int(cedula)
+        "cedula": int(cedula),
+        "fecha_hora": str(hora)
     }
     client.publish('sambil/compra/mcadress',json.dumps(payload),qos=0)
     print(payload)
@@ -167,6 +194,7 @@ def compraComida(comidaC,mcAdress,hora,sexo,edad,cedula):
         "mcadress": str(mcAdress),
         }
         client.publish('sambil/sensores/tiendas-mesas',json.dumps(payload),qos=0)
+        print("-------Usando Mesa-------")
         print(payload)
         time.sleep(0.5)
         hora = hora + datetime.timedelta(minutes= np.random.randint(60,110))
@@ -185,6 +213,7 @@ def compraComida(comidaC,mcAdress,hora,sexo,edad,cedula):
         "edad": int(edad)
         }
         client.publish('sambil/sensores/tiendas-mesas',json.dumps(payload),qos=0)
+        print("-------Usando Mesa-------")
         print(payload)
         time.sleep(0.5)
         hora = hora + datetime.timedelta(minutes= np.random.randint(60,110))
@@ -194,6 +223,7 @@ def compraComida(comidaC,mcAdress,hora,sexo,edad,cedula):
         salirTiendasComidaNMC(comidaC,hora,sexo,edad)
 
 def salirTiendasComidamc(comidaC,hora,mcAdress):
+    print('---------Saliendo de tienda-----------')
     datosSensorT = sensor_tiendas(comidaC)
     sensorC = np.random.randint(datosSensorT[0],datosSensorT[1]+1)
     salida = np.random.randint(5,10)
@@ -208,6 +238,7 @@ def salirTiendasComidamc(comidaC,hora,mcAdress):
     time.sleep(0.5)
 
 def salirTiendasComidaNMC(comidaC,hora,sexo,edad):
+    print('---------Saliendo de tienda-----------')
     datosSensorT = sensor_tiendas(comidaC)
     sensorC = np.random.randint(datosSensorT[0],datosSensorT[1]+1)
     salida = np.random.randint(5,10)
@@ -226,29 +257,32 @@ def salirTiendasComidaNMC(comidaC,hora,sexo,edad):
     print(payload)
     time.sleep(0.5)
 
-def comprarTienda(normal,mcAdress,cedula):
+def comprarTienda(normal,mcAdress,cedula,hora):
+    print('---------Comprando en tienda-----------')
     factura = np.random.randint(1111111,9999999)
     monto = np.random.uniform(50,1000)
     monto = round(monto,2)
     if mcAdress != '':
-        if np.random.randint(1,3) == 2:
+        if np.random.randint(1,9) == 2 or 6:
+            print('---Uy la cedula no coincide con McAdress, Borrando Siguiente Registro---')
             cedula = np.random.uniform(1000000,15000000)
             while(cedula<0):
                 cedula = np.random.uniform(1000000,15000000)
             cedula = round(cedula)
+    hora = hora + datetime.timedelta(minutes= np.random.randint(7,10))
     payload = {
         "factura": int(factura),
         "idtienda": int(normal),
         "monto": float(monto),
         "mcadress": str(mcAdress),
-        "cedula": int(cedula)
+        "cedula": int(cedula),
+        "fecha_hora": str(hora),
     }
     client.publish('sambil/compra/mcadress',json.dumps(payload),qos=0)
     print(payload)
 
 def recorrido(hora,mcadress,cedula):
     visitas =  cantTiendas(hora)
-    print(visitas)
     mcAdress = mcadress
     cond = (visitas[0] + visitas[1] + visitas[2])
     while(cond != 0):
@@ -264,12 +298,12 @@ def recorrido(hora,mcadress,cedula):
                 "mcadress": str(mcAdress)
             }
             client.publish('sambil/sensores/tiendas-mesas',json.dumps(payload),qos=0)
+            print('---------Entrando tienda-----------')
             print(payload)
             time.sleep(0.5)
             comprar = np.random.randint(1,3)
-            print('comprar:',comprar)
             if comprar == 1:
-                comprarTienda(normal,mcAdress,cedula)
+                comprarTienda(normal,mcAdress,cedula,hora)
             sensorN = np.random.randint(datosNormal[0],datosNormal[1]+1)
             salida = np.random.randint(10,31)
             hora = hora + datetime.timedelta(minutes=salida)
@@ -279,6 +313,7 @@ def recorrido(hora,mcadress,cedula):
                 "mcadress": str(mcAdress)
             }
             client.publish('sambil/sensores/tiendas-mesas',json.dumps(payload),qos=0)
+            print('---------Saliendo de tienda-----------')
             print(payload)
             visitas[0] = visitas[0] - 1
             time.sleep(0.5)
@@ -294,6 +329,7 @@ def recorrido(hora,mcadress,cedula):
                 "mcadress": str(mcAdress)
             }
             client.publish('sambil/sensores/tiendas-mesas',json.dumps(payload),qos=0)
+            print('---------Entrando a tienda-----------')
             print(payload)
             compraComida(comidaC,mcAdress,hora,'','',cedula)
             visitas[1] = visitas[1] - 1
@@ -309,6 +345,7 @@ def recorrido(hora,mcadress,cedula):
                 "mcadress": str(mcAdress)
             }
             client.publish('sambil/sensores/tiendas-mesas',json.dumps(payload),qos=0)
+            print('---------Entrando a tienda-----------')
             print(payload)
             time.sleep(0.5)
             sensorNC = np.random.randint(datosSTNC[0],datosSTNC[1]+1)
@@ -320,6 +357,7 @@ def recorrido(hora,mcadress,cedula):
                 "mcadress": str(mcAdress)
             }
             client.publish('sambil/sensores/tiendas-mesas',json.dumps(payload),qos=0)
+            print('---------Saliendo de tienda-----------')
             print(payload)
             visitas[2] = visitas[2] - 1
             time.sleep(0.5)
@@ -335,6 +373,7 @@ def recorrido(hora,mcadress,cedula):
                 "edad": ''
     }
     client.publish('sambil/sensores/entrada',json.dumps(payload),qos=0)
+    print('---------Saliendo del CC-----------')
     print(payload)
 
 def recorridoNMC(hora,sexo,edad):
@@ -342,8 +381,7 @@ def recorridoNMC(hora,sexo,edad):
     cedula = np.random.uniform(1000000,15000000)
     while(cedula<0):
         cedula = np.random.uniform(1000000,15000000)
-    cedula = round(cedula) 
-    print(visitas)
+    cedula = round(cedula)
     cond = (visitas[0] + visitas[1] + visitas[2])
     while(cond != 0):
         if visitas[1]==0 and visitas[0] != 0 or visitas[2] == 0 and visitas[0] != 0: #Tiendas Normales
@@ -363,12 +401,13 @@ def recorridoNMC(hora,sexo,edad):
                 "edad": int(edad)
             }
             client.publish('sambil/sensores/tiendas-mesas',json.dumps(payload),qos=0)
+            print('---------Entrando a tienda-----------')
             print(payload)
             time.sleep(0.5)
             comprar = np.random.randint(1,3)
             print('comprar:',comprar)
             if comprar == 1:
-                comprarTienda(normal,'',cedula)
+                comprarTienda(normal,'',cedula,hora)
             sensorN = np.random.randint(datosNormal[0],datosNormal[1]+1)
             salida = np.random.randint(10,31)
             hora = hora + datetime.timedelta(minutes=salida)
@@ -383,6 +422,7 @@ def recorridoNMC(hora,sexo,edad):
                 "edad": int(edad)
             }
             client.publish('sambil/sensores/tiendas-mesas',json.dumps(payload),qos=0)
+            print('---------Saliendo de tienda-----------')
             print(payload)
             visitas[0] = visitas[0] - 1
             time.sleep(0.5)
@@ -403,6 +443,7 @@ def recorridoNMC(hora,sexo,edad):
                 "edad": int(edad)
             }
             client.publish('sambil/sensores/tiendas-mesas',json.dumps(payload),qos=0)
+            print('---------Entrando a tienda-----------')
             print(payload)
             compraComida(comidaC,'',hora,sexo,edad,cedula)
             visitas[1] = visitas[1] - 1
@@ -423,6 +464,7 @@ def recorridoNMC(hora,sexo,edad):
                 "edad": int(edad)
             }
             client.publish('sambil/sensores/tiendas-mesas',json.dumps(payload),qos=0)
+            print('---------Entrando a tienda-----------')
             print(payload)
             time.sleep(0.5)
             sensorNC = np.random.randint(datosSTNC[0],datosSTNC[1]+1)
@@ -439,6 +481,7 @@ def recorridoNMC(hora,sexo,edad):
                 "edad": int(edad)
             }
             client.publish('sambil/sensores/tiendas-mesas',json.dumps(payload),qos=0)
+            print('---------Saliendo de tienda-----------')
             print(payload)
             visitas[2] = visitas[2] - 1
             time.sleep(0.5)
@@ -457,6 +500,7 @@ def recorridoNMC(hora,sexo,edad):
                 "edad": int(edad)
     }
     client.publish('sambil/sensores/entrada',json.dumps(payload),qos=0)
+    print('---------Saliendo de CC-----------')
     print(payload)  
  
 def duracionNMC(sensor,hora,sexo,edad):
@@ -475,42 +519,19 @@ def duracionNMC(sensor,hora,sexo,edad):
     time.sleep(0.5)
     recorridoNMC(hora,sexo,edad)
 
-def devolver_ma():
-    cur = con.cursor()
-    cur.execute("SELECT mcadress.mcadress FROM mcadress")
-    rows = cur.fetchall()
-    ma_usuarios = []
-    for row in rows:
-        ma_usuarios.append(row)
-    return ma_usuarios
-
-def escoger_ma(ma):
-    ma_array = ma
-    ma_escogido = np.random.randint(0,len(ma_array))
-    return ma_array[ma_escogido]
-
-def ultimoAcceso(mcadress):
-    ultimoAcceso = pandas.read_sql_query("select fecha_hora from sensor_mcadress where mcadress = '%s' order by fecha_hora desc limit 1"%mcadress,con)
-    fecha = str(pandas.unique(ultimoAcceso['fecha_hora']))
-    return fecha
-
-def CedulaMA(mcadress):
-    cedulaMA = pandas.read_sql_query("SELECT cedula from mcadress where mcadress =  '%s'"%mcadress,con)
-    cedula = int(pandas.unique(cedulaMA['cedula']))
-    return cedula 
-    
-
 def main():
     client.qos = 0
     client.connect(host='localhost')
     meanEntrada = 10 
     stdEntrada = 2
     day = 1
+    mes = 6
     while(day != 30):
+        print('----------------------------------------------Dia ',day,'---------------------------------------------------------')
         personasPorDia = np.random.normal(meanEntrada, stdEntrada)
         while(personasPorDia>1):
-            print('persona nueva')
-            horaBase= datetime.datetime.now().replace(hour=0,minute=0, second=0, day=day)
+            print('---------------------Persona Nueva-------------------------')
+            horaBase= datetime.datetime.now().replace(hour=0,minute=0, second=0, day=day, month= mes)
             hora = horaBase + datetime.timedelta(hours=np.random.uniform(10,20)) + datetime.timedelta(minutes=np.random.uniform(0,60))
             datosSensor= Sensor()
             sensor= np.random.randint(datosSensor[0],datosSensor[1]+1)
@@ -527,16 +548,13 @@ def main():
                     personasCMA(mcAdress,sexo,sensor,hora,mc,cedula)
                     time.sleep(0.5)
                     recorrido(hora,mcAdress,cedula)
-
                 else:
                     duracionNMC(sensor,hora,sexo,mc[1])
             else:
-                print('entro!!')
                 sexo = Gender()
                 mc = personasMA()
                 ma_dev = devolver_ma()
                 if ma_dev == []:
-                    print('pero entro aqui :(')
                     mc = personasMA()
                     if  mc[0] == True:
                         mcAdress =  generateMC()
@@ -555,9 +573,7 @@ def main():
                     separar = ultimoA.split('-',3)
                     mes = int(separar[1])
                     dia = int(separar[2].split(' ')[0])
-                    print(dia,hora.day,mes,hora.month)
                     if dia == hora.day and mes == hora.month:
-                        print('pero entro aqui :( 2')
                         mc = personasMA()
                         if  mc[0] == True:
                             mcAdress =  generateMC()
@@ -570,7 +586,8 @@ def main():
                             recorrido(hora,mcAdress,cedula)
                         else:
                             duracionNMC(sensor,hora,sexo,mc[1])
-                    else:     
+                    else:
+                        print('---------Persona Antes Registrada---------')     
                         payload = {
                             "idsensor": int(sensor),
                             "fecha_hora": str(hora),
@@ -582,7 +599,6 @@ def main():
                         print(payload)
                         time.sleep(0.5)
                         cedula = int(CedulaMA(ma_escogido))
-                        print('la cedula es: ',cedula)
                         recorrido(hora,ma_escogido,cedula)  
             personasPorDia-=1
         day = day +1

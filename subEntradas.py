@@ -7,7 +7,7 @@ import numpy
 import matplotlib
 import json
 
-conn = psycopg2.connect(host = 'localhost', user= 'postgres', password ='27450917', dbname= 'proyecto1')
+conn = psycopg2.connect(host = 'localhost', user= 'postgres', password ='27450917', dbname= 'ABDP1')
 
 
 def mcAdress(a):

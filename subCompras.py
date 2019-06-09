@@ -7,19 +7,19 @@ import numpy
 import matplotlib
 import json
 
-conn = psycopg2.connect(host = 'localhost', user= 'postgres', password ='27450917', dbname= 'proyecto1')
+conn = psycopg2.connect(host = 'localhost', user= 'postgres', password ='27450917', dbname= 'ABDP1')
 
 
 def compra(a):
     cur = conn.cursor()
-    sql = '''INSERT INTO compra (factura,idtienda,monto,cedula,mcadress) VALUES ( %s, %s, %s, %s, %s);'''
-    cur.execute(sql, (a["factura"],a["idtienda"],a["monto"], a["cedula"], a["mcadress"]))
+    sql = '''INSERT INTO compra (factura,idtienda,monto,cedula,mcadress,fecha_hora) VALUES ( %s, %s, %s, %s, %s, %s);'''
+    cur.execute(sql, (a["factura"],a["idtienda"],a["monto"], a["cedula"], a["mcadress"], a["fecha_hora"]))
     conn.commit()
 
 def compra2(a):
     cur = conn.cursor()
-    sql = '''INSERT INTO compra (factura,idtienda,monto,cedula) VALUES ( %s, %s, %s, %s);'''
-    cur.execute(sql, (a["factura"],a["idtienda"],a["monto"], a["cedula"]))
+    sql = '''INSERT INTO compra (factura,idtienda,monto,cedula,fecha_hora) VALUES ( %s, %s, %s, %s, %s);'''
+    cur.execute(sql, (a["factura"],a["idtienda"],a["monto"], a["cedula"], a["fecha_hora"]))
     conn.commit()
 
 def on_connect(client, userdata, flags, rc):    
